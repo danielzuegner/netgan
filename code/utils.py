@@ -330,17 +330,19 @@ def score_matrix_from_random_walks(random_walks, N, symmetric=True):
     return mat
 
 
-def random_walk(input_adjacency, rw_len, degrees = None):
+def random_walk(A, rw_len, p=1, q=1):
     """
-    Sample a random walk on the input graph.
+    Sample a biased random walk on the input graph. If both p and q are equal to 1, this corresponds to unbiased random walks.
     Parameters
     ----------
-    input_adjacency: sparse matrix, shape (N,N)
-                     The adjacency matrix of the input graph.
+    A: sparse matrix, shape (N,N)
+                     The binary, symmetric adjacency matrix of the input graph.
     rw_len: int
             The length of the random walk to be generated.
-    degrees: None or np.array of shape (N,)
-             If provided, the first node will be sampled proportionally to the degrees, otherwise uniformly.
+    p: float, default: 1
+       the return parameter of the biased random walks in the node2vec paper
+    q: float, default: 1
+       the in-out parameter of the biased random walks in the node2vec paper
 
     Returns
     -------
@@ -348,52 +350,59 @@ def random_walk(input_adjacency, rw_len, degrees = None):
                  The generated random walk.
 
     """
-    """
-    Sample a random walk on the input graph.
-    :param input_adjacency: Sparse adjacency matrix of the input graph.
-    :param rw_len: Length of the random walk
-    :param degrees: If provided, the first node will be sampled proportionally to the degrees.
-    :return: Random walk
-    """
+    
+    assert p > 0
+    assert q > 0
+    assert np.all(A.diagonal() == 0)
+    assert np.all(A.toarray() == A.T.toarray())
 
-    if not "lil" in str(type(input_adjacency)):
+    if not "lil" in str(type(A)):
         warnings.warn("Input adjacency matrix not in lil format. Converting it to lil.")
-        input_adjacency = input_adjacency.tolil()
+        A = A.tolil()
+    N = A.shape[0]
+    source_node = np.random.choice(N)
+    walk = [source_node]
+    
+    for n in range(rw_len):
+        current_neighbors = np.array(A.rows[walk[-1]])
+        if n == 0:  # currently at the first node
+            walk.append(np.random.choice(current_neighbors))
+            continue
+        
+        prev = walk[-2]
+        prev_nbs = A[prev].nonzero()[1]
+        
+        is_dist_1 = np.isin(current_neighbors, prev_nbs)
+        is_dist_0 = current_neighbors == prev
+        is_dist_2 = 1 - is_dist_1 - is_dist_0
+                
+        alpha_pq = is_dist_0 / p + is_dist_1 + is_dist_2/q
+        alpha_pq_norm = alpha_pq/np.sum(alpha_pq)
+        next_node = np.random.choice(current_neighbors, p=alpha_pq_norm)
+        walk.append(next_node)
 
-    if degrees is not None:
-        probabilities = degrees / np.sum(degrees)
-    else:
-        probabilities = np.tile(1.0 / len(input_adjacency.rows), len(input_adjacency.rows))
 
-    rw = []
-    first_node = np.random.choice(len(input_adjacency.rows), 1, p=probabilities)[0]
-    rw.append(first_node)
-    for sample in range(rw_len - 1):
-        rw.append(np.random.choice(input_adjacency.rows[rw[-1]]))
-
-    return np.array(rw)
+    return np.array(walk)
 
 
 class RandomWalker:
     """
     Helper class to generate random walks on the input adjacency matrix.
     """
-    def __init__(self, adj, rw_len):
+    def __init__(self, adj, rw_len, p=1, q=1):
         self.adj = adj
         if not "lil" in str(type(adj)):
             warnings.warn("Input adjacency matrix not in lil format. Converting it to lil.")
             self.adj = self.adj.tolil()
 
         self.rw_len = rw_len
-        self.degrees = self.adj.sum(0).A1
+        self.p = p
+        self.q = q
 
     def walk(self):
         while True:
-            yield random_walk(self.adj, self.rw_len)
+            yield random_walk(self.adj, self.rw_len, self.p, self.q)
 
-    def walk_degree_proportional(self):
-        while True:
-            yield random_walk(self.adj, self.rw_len, self.degrees)
 
 
 def edge_overlap(A, B):
