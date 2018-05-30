@@ -353,8 +353,8 @@ def random_walk(A, rw_len, p=1, q=1):
     
     assert p > 0
     assert q > 0
-    assert np.all(A.diagonal() == 0)
-    assert np.all(A.toarray() == A.T.toarray())
+    #assert np.all(A.diagonal() == 0)
+    #assert np.all(A.toarray() == A.T.toarray())
 
     if not "lil" in str(type(A)):
         warnings.warn("Input adjacency matrix not in lil format. Converting it to lil.")
@@ -363,7 +363,7 @@ def random_walk(A, rw_len, p=1, q=1):
     source_node = np.random.choice(N)
     walk = [source_node]
     
-    for n in range(rw_len):
+    for n in range(rw_len-1):
         current_neighbors = np.array(A.rows[walk[-1]])
         if n == 0:  # currently at the first node
             walk.append(np.random.choice(current_neighbors))
