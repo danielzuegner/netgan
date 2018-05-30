@@ -25,7 +25,7 @@ def load_npz(file_name):
     if not file_name.endswith('.npz'):
         file_name += '.npz'
     with np.load(file_name) as loader:
-        loader = dict(loader)
+        loader = dict(loader)['arr_0'].item()
         adj_matrix = sp.csr_matrix((loader['adj_data'], loader['adj_indices'],
                                               loader['adj_indptr']), shape=loader['adj_shape'])
 
