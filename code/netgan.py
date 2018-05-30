@@ -21,11 +21,11 @@ class NetGan:
     NetGAN class, an implicit generative model for graphs using random walks.
     """
 
-    def __init__(self, N, rw_len, walk_generator, generator_layers = [40], discriminator_layers = [30],
-                 W_down_generator_size = 64, W_down_discriminator_size = 32, batch_size = 128, noise_dim = 16,
-                 noise_type="Gaussian", learning_rate=1e-3, disc_iters = 5, wasserstein_penalty=10,
-                 weight_decay_generator=1e-6, weight_decay_discriminator=1e-6, temp_start = 1.0, min_temperature = 0.5,
-                 temperature_decay = 0.995, seed = 15, gpu_id=0):
+    def __init__(self, N, rw_len, walk_generator, generator_layers=[40], discriminator_layers=[30],
+                 W_down_generator_size=64, W_down_discriminator_size=32, batch_size=128, noise_dim=16,
+                 noise_type="Gaussian", learning_rate=1e-3, disc_iters=5, wasserstein_penalty=10,
+                 l2_penalty_generator=1e-6, l2_penalty_discriminator=1e-6, temp_start=1.0, min_temperature=0.5,
+                 temperature_decay=0.995, seed=15, gpu_id=0):
         """
         Initialize NetGAN.
 
@@ -58,9 +58,9 @@ class NetGan:
         wasserstein_penalty: float, default: 10
                              The Wasserstein gradient penalty applied to the discriminator. See the Wasserstein GAN
                              paper for details.
-        weight_decay_generator: float, default: 1e-6
+        l2_penalty_generator: float, default: 1e-6
                                 L2 penalty on the generator weights.
-        weight_decay_discriminator: float, default: 1e-6
+        l2_penalty_discriminator: float, default: 1e-6
                                     L2 penalty on the discriminator weights.
         temp_start: float, default: 1.0
                     The initial temperature for the Gumbel softmax.
@@ -85,8 +85,8 @@ class NetGan:
             'Discriminator_Layers': discriminator_layers,
             'W_Down_Generator_size': W_down_generator_size,
             'W_Down_Discriminator_size': W_down_discriminator_size,
-            'weight_decay_generator': weight_decay_generator,
-            'weight_decay_discriminator': weight_decay_discriminator,
+            'l2_penalty_generator': l2_penalty_generator,
+            'l2_penalty_discriminator': l2_penalty_discriminator,
             'learning_rate': learning_rate,
             'batch_size': batch_size,
             'Wasserstein_penalty': wasserstein_penalty,
@@ -164,13 +164,13 @@ class NetGan:
         # weight regularization; we omit W_down from regularization
         self.disc_l2_loss = tf.add_n([ tf.nn.l2_loss(v) for v in tf.trainable_variables()
                                      if 'Disc' in v.name
-                                     and not 'W_down' in v.name]) * self.params['weight_decay_discriminator']
+                                     and not 'W_down' in v.name]) * self.params['l2_penalty_discriminator']
         self.disc_cost += self.disc_l2_loss
 
         # weight regularization; we omit  W_down from regularization
         self.gen_l2_loss = tf.add_n([ tf.nn.l2_loss(v) for v in tf.trainable_variables()
                                      if 'Gen' in v.name
-                                     and not 'W_down' in v.name]) * self.params['weight_decay_generator']
+                                     and not 'W_down' in v.name]) * self.params['l2_penalty_generator']
         self.gen_cost += self.gen_l2_loss
 
         self.gen_params = [v for v in tf.trainable_variables() if 'Generator' in v.name]
@@ -324,8 +324,8 @@ class NetGan:
             return final_score
 
     def train(self, A_orig, val_ones, val_zeros,  max_iters=50000, stopping=None, eval_transitions=15e6,
-              transitions_per_iter = 150000, max_patience=5, eval_every=500, plot_every=100, save_directory="../snapshots",
-              model_name = None, continue_training=False):
+              transitions_per_iter=150000, max_patience=5, eval_every=500, plot_every=100, save_directory="../snapshots",
+              model_name=None, continue_training=False):
         """
 
         Parameters
@@ -514,7 +514,7 @@ class NetGan:
         return log_dict
 
 
-def make_noise(shape, type = "Gaussian"):
+def make_noise(shape, type="Gaussian"):
     """
     Generate random noise.
 

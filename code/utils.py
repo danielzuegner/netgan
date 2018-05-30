@@ -485,7 +485,7 @@ def graph_from_scores(scores, n_edges):
     return target_g
 
 
-def symmetric(directed_adjacency, clip_to_one = True):
+def symmetric(directed_adjacency, clip_to_one=True):
     """
     Symmetrize the input adjacency matrix.
     Parameters
