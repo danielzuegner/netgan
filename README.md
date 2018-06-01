@@ -26,11 +26,13 @@ the respective parts of the code.
 
 ## References
 ### Cora dataset
-In the `data` folder you can find the Cora-ML dataset originally published by   
+In the `data` folder you can find the Cora-ML dataset. The raw data was originally published by   
 
-McCallum, Andrew Kachites, Nigam, Kamal, Rennie, Jason, and Seymore, Kristie.  
-*Automating the construction of internet portals with machine learning.*   
-Information Retrieval, 3(2):127–163, 2000.
+McCallum, Andrew Kachites, Nigam, Kamal, Rennie, Jason, and Seymore, Kristie. *"Automating the construction of internet portals with machine learning."* Information Retrieval, 3(2):127–163, 2000.
+
+and the graph was extracted by
+
+Bojchevski, Aleksandar, and Stephan Günnemann. *"Deep gaussian embedding of attributed graphs: Unsupervised inductive learning via ranking."* ICLR 2018.
 
 ## Contact
 Please contact zuegnerd@in.tum.de in case you have any questions.
