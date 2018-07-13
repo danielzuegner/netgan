@@ -10,13 +10,14 @@ Technical University of Munich
 """
 
 import tensorflow as tf
-from code import utils
+from netgan import utils
 import time
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score
 import os
+from matplotlib import pyplot as plt
 
-class NetGan:
+class NetGAN:
     """
     NetGAN class, an implicit generative model for graphs using random walks.
     """
@@ -324,7 +325,7 @@ class NetGan:
             return final_score
 
     def train(self, A_orig, val_ones, val_zeros,  max_iters=50000, stopping=None, eval_transitions=15e6,
-              transitions_per_iter=150000, max_patience=5, eval_every=500, plot_every=100, save_directory="../snapshots",
+              transitions_per_iter=150000, max_patience=5, eval_every=500, plot_every=-1, save_directory="../snapshots",
               model_name=None, continue_training=False):
         """
 
@@ -353,7 +354,7 @@ class NetGan:
                       applies to the VAL criterion.
         eval_every: int, default: 500
                     Evaluate the model every X iterations.
-        plot_every: int, default: 100
+        plot_every: int, default: -1
                     Plot the generator/discriminator losses every X iterations. Set to None or a negative number
                            to disable plotting.
         save_directory: str, default: "../snapshots"
@@ -428,9 +429,6 @@ class NetGan:
 
         print("**** Starting training. ****")
 
-        if plot_every is not None and plot_every > 0: # Updating plot for Jupyter notebook
-            plot_handler = utils.PlotHandler(plot_every)
-
         for _it in range(max_iters):
 
             if _it > 0 and _it % (2500) == 0:
@@ -501,11 +499,22 @@ class NetGan:
                 elif edge_overlap/A_orig.sum() >= stopping:   # Evaluate EO criterion
                     print("**** EARLY STOPPING AFTER {} ITERATIONS ****".format(_it))
                     break
-
-            if _it > 0 and _it % plot_every == 0  and  plot_every is not None and plot_every > 0:
-                plot_handler.update(disc_losses, gen_losses)
+                    
+            if plot_every > 0 and (_it+1) % plot_every == 0:
+                if len(disc_losses) > 10:
+                    plt.plot(disc_losses[9::], label="Critic loss")
+                    plt.plot(gen_losses[9::], label="Generator loss")
+                else:
+                    plt.plot(disc_losses, label="Critic loss")
+                    plt.plot(gen_losses, label="Generator loss")
+                plt.legend()
+                plt.show()
 
         print("**** Training completed after {} iterations. ****".format(_it))
+        plt.plot(disc_losses[9::], label="Critic loss")
+        plt.plot(gen_losses[9::], label="Generator loss")
+        plt.legend()
+        plt.show()
         if stopping is None:
             saver.restore(self.session, save_file)
         #### Training completed.

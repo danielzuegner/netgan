@@ -507,46 +507,6 @@ def symmetric(directed_adjacency, clip_to_one=True):
         A_symmetric[A_symmetric > 1] = 1
     return A_symmetric
 
-
-class PlotHandler:
-    """
-    Helper class to have an updating plot in a Jupyter notebook.
-    """
-
-    def __init__(self, plot_every=100, burn_in=10):
-        self.handle = display(None, display_id=True)
-        self.plot_every = plot_every
-        self.fig, self.ax = fig, ax = plt.subplots()
-        self.plot_gen, = self.ax.plot([0], alpha=0.6, label='Generator loss')
-        self.plot_disc, = ax.plot([0], alpha=0.6, label="Discriminator loss")
-
-        self.xlim = 5 * self.plot_every
-        self.ax.set_xlim(0, self.xlim)
-        self.ylim = 1e-5
-        ax.set_ylim(-self.ylim, self.ylim)
-        ax.legend()
-        self.burn_in = burn_in
-
-    def update(self, disc_losses, gen_losses):
-        if self.xlim <= len(gen_losses):
-            self.xlim = self.xlim + 5 * self.plot_every
-            self.ax.set_xlim(0, self.xlim)
-
-        if len(gen_losses) < self.burn_in:
-            return
-
-        max_abs_loss = np.max(np.abs(gen_losses[self.burn_in::] + disc_losses[self.burn_in::]))
-        if self.ylim < 1.5 * max_abs_loss:
-            self.ylim = 1.5 * max_abs_loss
-            self.ax.set_ylim(-self.ylim, self.ylim)
-
-        self.plot_gen.set_xdata(np.arange(len(gen_losses)))
-        self.plot_gen.set_ydata(gen_losses)
-        self.plot_disc.set_xdata(np.arange(len(gen_losses)))
-        self.plot_disc.set_ydata(disc_losses)
-        self.handle.update(self.fig)
-
-
 def squares(g):
     """
     Count the number of squares for each node
