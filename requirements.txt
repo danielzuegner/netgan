@@ -6,3 +6,4 @@ matplotlib
 powerlaw
 python-igraph
 networkx
+numba
