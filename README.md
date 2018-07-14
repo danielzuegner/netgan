@@ -19,10 +19,13 @@ Note that the modules `powerlaw` and `python-igraph` are only needed to compute
 the graph statistics. If you only want to run NetGAN, feel free to comment out 
 the respective parts of the code.
 
-
 ## Run the code
  
  To try our code, the best way to do so is to use the IPython notebook `demo.ipynb`
+ 
+## Installation
+
+To install the package, run `python setup.py install`.
 
 ## References
 ### Cora dataset
