@@ -6,5 +6,5 @@ setup(name='netgan',
       author='Aleksandar Bojchevski, Oleksandr Shchur, Daniel Zügner, Stephan Günnemann',
       author_email='zuegnerd@in.tum.de',
       packages=['netgan'],
-      install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'tensorflow', 'networkx'],
+      install_requires=['numpy', 'scipy', 'scikit-learn', 'matplotlib', 'tensorflow', 'networkx', 'numba'],
 zip_safe=False)

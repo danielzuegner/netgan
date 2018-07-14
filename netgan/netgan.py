@@ -74,6 +74,7 @@ class NetGAN:
               Random seed.
         gpu_id: int or None, default: 0
                 The ID of the GPU to be used for training. If None, CPU only.
+        
         """
 
 
@@ -134,8 +135,9 @@ class NetGAN:
         self.fake_inputs_discrete = self.generate_discrete(self.params['batch_size'], reuse=True)
 
         # Pre-fetch real random walks
-        dataset = tf.data.Dataset.from_generator(walk_generator, tf.int32, [self.rw_len])
-        dataset_batch = dataset.prefetch(10 * self.params['batch_size']).batch(self.params['batch_size'])
+        dataset = tf.data.Dataset.from_generator(walk_generator, tf.int32, [self.params['batch_size'], self.rw_len])
+        #dataset_batch = dataset.prefetch(2).batch(self.params['batch_size'])
+        dataset_batch = dataset.prefetch(100)
         batch_iterator = dataset_batch.make_one_shot_iterator()
         real_data = batch_iterator.get_next()
 
@@ -278,6 +280,7 @@ class NetGAN:
 
                 # Perform Gumbel softmax to ensure gradients flow
                 output = gumbel_softmax(output_bef, temperature=self.tau, hard = True)
+
 
                 # Back to dimension d
                 inputs = tf.matmul(output, self.W_down_generator)
