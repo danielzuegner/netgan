@@ -23,6 +23,9 @@ the respective parts of the code.
  
  To try our code, the best way to do so is to use the IPython notebook `demo.ipynb`
  
+## Pre-trained models used in the paper
+Run `graph_generation_pretrained.ipynb` and `link_prediction_pretrained.ipynb` to try our pre-trained models on Cora-ML.
+ 
 ## Installation
 
 To install the package, run `python setup.py install`.
