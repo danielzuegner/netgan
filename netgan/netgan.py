@@ -23,10 +23,10 @@ class NetGAN:
     """
 
     def __init__(self, N, rw_len, walk_generator, generator_layers=[40], discriminator_layers=[30],
-                 W_down_generator_size=64, W_down_discriminator_size=32, batch_size=128, noise_dim=16,
-                 noise_type="Gaussian", learning_rate=1e-3, disc_iters=5, wasserstein_penalty=10,
-                 l2_penalty_generator=1e-6, l2_penalty_discriminator=1e-6, temp_start=1.0, min_temperature=0.5,
-                 temperature_decay=0.995, seed=15, gpu_id=0):
+                 W_down_generator_size=128, W_down_discriminator_size=128, batch_size=128, noise_dim=16,
+                 noise_type="Gaussian", learning_rate=0.0003, disc_iters=3, wasserstein_penalty=10,
+                 l2_penalty_generator=1e-7, l2_penalty_discriminator=5e-5, temp_start=5.0, min_temperature=0.5,
+                 temperature_decay=1-5e-5, seed=15, gpu_id=0, use_gumbel=True, legacy_generator=False):
         """
         Initialize NetGAN.
 
@@ -42,9 +42,9 @@ class NetGAN:
                           The layer sizes of the generator LSTM layers
         discriminator_layers: list of integers, default: [30], i.e. a single layer with 30 units.
                               The sizes of the discriminator LSTM layers
-        W_down_generator_size: int, default: 64
+        W_down_generator_size: int, default: 128
                                The size of the weight matrix W_down of the generator. See our paper for details.
-        W_down_discriminator_size: int, default: 32
+        W_down_discriminator_size: int, default: 128
                                    The size of the weight matrix W_down of the discriminator. See our paper for details.
         batch_size: int, default: 128
                     The batch size.
@@ -52,33 +52,36 @@ class NetGAN:
                    The dimension of the random noise that is used as input to the generator.
         noise_type: str in ["Gaussian", "Uniform], default: "Gaussian"
                     The noise type to feed into the generator.
-        learning_rate: float, default: 1e-3
+        learning_rate: float, default: 0.0003
                        The learning rate.
-        disc_iters: int, default: 5
+        disc_iters: int, default: 3
                     The number of discriminator iterations per generator training iteration.
         wasserstein_penalty: float, default: 10
                              The Wasserstein gradient penalty applied to the discriminator. See the Wasserstein GAN
                              paper for details.
-        l2_penalty_generator: float, default: 1e-6
+        l2_penalty_generator: float, default: 1e-7
                                 L2 penalty on the generator weights.
-        l2_penalty_discriminator: float, default: 1e-6
+        l2_penalty_discriminator: float, default: 5e-5
                                     L2 penalty on the discriminator weights.
-        temp_start: float, default: 1.0
+        temp_start: float, default: 5.0
                     The initial temperature for the Gumbel softmax.
         min_temperature: float, default: 0.5
                          The minimal temperature for the Gumbel softmax.
-        temperature_decay: float, default: 0.995
+        temperature_decay: float, default: 1-5e-5
                            After each evaluation, the current temperature is updated as
                            current_temp := max(temperature_decay*current_temp, min_temperature)
         seed: int, default: 15
               Random seed.
         gpu_id: int or None, default: 0
                 The ID of the GPU to be used for training. If None, CPU only.
+        use_gumbel: bool, default: True
+                Use the Gumbel softmax trick.
+        
+        legacy_generator: bool, default: False
+            If True, the hidden and cell states of the generator LSTM are initialized by two separate feed-forward networks. 
+            If False (recommended), the hidden layer is shared, which has less parameters and performs just as good.
         
         """
-
-
-
 
         self.params = {
             'noise_dim': noise_dim,
@@ -95,7 +98,9 @@ class NetGAN:
             'temp_start': temp_start,
             'min_temperature': min_temperature,
             'temperature_decay': temperature_decay,
-            'disc_iters': disc_iters
+            'disc_iters': disc_iters,
+            'use_gumbel': use_gumbel,
+            'legacy_generator': legacy_generator
         }
 
         assert rw_len > 1, "Random walk length must be > 1."
@@ -131,8 +136,9 @@ class NetGAN:
         self.generator_function = self.generator_recurrent
         self.discriminator_function = self.discriminator_recurrent
 
-        self.fake_inputs = self.generator_function(self.params['batch_size'], reuse=False)
-        self.fake_inputs_discrete = self.generate_discrete(self.params['batch_size'], reuse=True)
+        self.fake_inputs = self.generator_function(self.params['batch_size'], reuse=False, gumbel=use_gumbel, legacy=legacy_generator)
+        self.fake_inputs_discrete = self.generate_discrete(self.params['batch_size'], reuse=True,
+                                                           gumbel=use_gumbel, legacy=legacy_generator)
 
         # Pre-fetch real random walks
         dataset = tf.data.Dataset.from_generator(walk_generator, tf.int32, [self.params['batch_size'], self.rw_len])
@@ -196,7 +202,7 @@ class NetGAN:
         self.init_op = tf.global_variables_initializer()
 
 
-    def generate_discrete(self, n_samples, reuse=True, z=None):
+    def generate_discrete(self, n_samples, reuse=True, z=None, gumbel=True, legacy=False):
         """
         Generate a random walk in index representation (instead of one hot). This is faster but prevents the gradients
         from flowing into the generator, so we only use it for evaluation purposes.
@@ -209,6 +215,12 @@ class NetGAN:
                If True, generator variables will be reused.
         z: None or tensor of shape (n_samples, noise_dim)
            The input noise. None means that the default noise generation function will be used.
+        gumbel: bool, default: False
+            Whether to use the gumbel softmax for generating discrete output.
+        legacy: bool, default: False
+            If True, the hidden and cell states of the generator LSTM are initialized by two separate feed-forward networks. 
+            If False (recommended), the hidden layer is shared, which has less parameters and performs just as good.
+        
         Returns
         -------
                 The generated random walks, shape [None, rw_len, N]
@@ -216,9 +228,9 @@ class NetGAN:
 
         """
 
-        return tf.argmax(self.generator_function(n_samples, reuse, z), axis=-1)
+        return tf.argmax(self.generator_function(n_samples, reuse, z, gumbel=gumbel, legacy=legacy), axis=-1)
 
-    def generator_recurrent(self, n_samples, reuse=None, z=None):
+    def generator_recurrent(self, n_samples, reuse=None, z=None, gumbel=True, legacy=False):
         """
         Generate random walks using LSTM.
         Parameters
@@ -229,7 +241,11 @@ class NetGAN:
                If True, generator variables will be reused.
         z: None or tensor of shape (n_samples, noise_dim)
            The input noise. None means that the default noise generation function will be used.
-
+        gumbel: bool, default: False
+            Whether to use the gumbel softmax for generating discrete output.
+        legacy: bool, default: False
+            If True, the hidden and cell states of the generator LSTM are initialized by two separate feed-forward networks. 
+            If False (recommended), the hidden layer is shared, which has less parameters and performs just as good.
         Returns
         -------
         The generated random walks, shape [None, rw_len, N]
@@ -254,13 +270,24 @@ class NetGAN:
 
             # Noise preprocessing
             for ix,size in enumerate(self.G_layers):
+                if legacy: # old version to initialize LSTM. new version has less parameters and performs just as good.
+                    h_intermediate = tf.layers.dense(initial_states_noise, size, name="Generator.h_int_{}".format(ix+1),
+                                                     reuse=reuse, activation=tf.nn.tanh)
+                    h = tf.layers.dense(h_intermediate, size, name="Generator.h_{}".format(ix+1), reuse=reuse,
+                                        activation=tf.nn.tanh)
 
-                intermediate = tf.layers.dense(initial_states_noise, size, name="Generator.int_{}".format(ix+1),
-                                                 reuse=reuse, activation=tf.nn.tanh)
-                h = tf.layers.dense(intermediate, size, name="Generator.h_{}".format(ix+1), reuse=reuse,
-                                    activation=tf.nn.tanh)
-                c = tf.layers.dense(intermediate, size, name="Generator.c_{}".format(ix+1), reuse=reuse,
-                                    activation=tf.nn.tanh)
+                    c_intermediate = tf.layers.dense(initial_states_noise, size, name="Generator.c_int_{}".format(ix+1),
+                                                     reuse=reuse, activation=tf.nn.tanh)
+                    c = tf.layers.dense(c_intermediate, size, name="Generator.c_{}".format(ix+1), reuse=reuse,
+                                        activation=tf.nn.tanh)
+                    
+                else:
+                    intermediate = tf.layers.dense(initial_states_noise, size, name="Generator.int_{}".format(ix+1),
+                                                     reuse=reuse, activation=tf.nn.tanh)
+                    h = tf.layers.dense(intermediate, size, name="Generator.h_{}".format(ix+1), reuse=reuse,
+                                        activation=tf.nn.tanh)
+                    c = tf.layers.dense(intermediate, size, name="Generator.c_{}".format(ix+1), reuse=reuse,
+                                        activation=tf.nn.tanh)
                 initial_states.append((c, h))
 
             state = initial_states
@@ -279,8 +306,10 @@ class NetGAN:
                 output_bef = tf.matmul(output, self.W_up) + self.b_W_up
 
                 # Perform Gumbel softmax to ensure gradients flow
-                output = gumbel_softmax(output_bef, temperature=self.tau, hard = True)
-
+                if gumbel:
+                    output = gumbel_softmax(output_bef, temperature=self.tau, hard = True)
+                else:
+                    output = tf.nn.softmax(output_bef)
 
                 # Back to dimension d
                 inputs = tf.matmul(output, self.W_down_generator)
@@ -480,7 +509,8 @@ class NetGAN:
                                                average_precision_score(actual_labels_val, edge_scores)))
 
                 # Update Gumbel temperature
-                temperature = max(self.params['min_temperature'], temperature * self.params['temperature_decay'])
+                temperature = np.maximum(self.params['temp_start'] * np.exp(-(1-self.params['temperature_decay']) * _it),
+                                         self.params['min_temperature'])
 
                 print("**** Iter {:<6} Val ROC {:.3f}, AP: {:.3f}, EO {:.3f} ****".format(_it,
                                                                                val_performances[-1][0],
@@ -588,6 +618,6 @@ def gumbel_softmax(logits, temperature, hard=False):
       """
     y = gumbel_softmax_sample(logits, temperature)
     if hard:
-        y_hard = tf.cast(tf.equal(y, tf.reduce_max(y, 1, keep_dims=True)), y.dtype)
+        y_hard = tf.cast(tf.equal(y, tf.reduce_max(y, 1, keepdims=True)), y.dtype)
         y = tf.stop_gradient(y_hard - y) + y
     return y
