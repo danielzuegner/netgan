@@ -1,6 +1,8 @@
 # NetGAN: Generating Graphs via Random Walks
 
+<p align="center">
 <img src="https://www.kdd.in.tum.de/fileadmin/w00bxq/www/netgan/netgan.png" width="400">
+</p>
 
 Implementation of the method proposed in the paper:   
 **[NetGAN: Generating Graphs via Random Walks](https://arxiv.org/abs/1803.00816)** 
@@ -30,10 +32,11 @@ Run `graph_generation_pretrained.ipynb` and `link_prediction_pretrained.ipynb` t
  
 ## Latent variable interpolation
 Run `latent_interpolation.ipynb` to run latent variable interpolation experiments as in the paper.
-![Nettack latent variable interpolation](https://www.kdd.in.tum.de/fileadmin/w00bxq/www/netgan/heatmaps.png)
+<p align="center">
+<img align="center" src="https://www.kdd.in.tum.de/fileadmin/w00bxq/www/netgan/heatmaps.png" width="500"/>
+</p>
 
 ## Installation
-
 To install the package, run `python setup.py install`.
 
 ## References
