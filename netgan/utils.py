@@ -685,14 +685,36 @@ def statistics_edge_distribution_entropy(A_in):
     H_er = 1 / np.log(n) * np.sum(-degrees / (2 * float(m)) * np.log((degrees+.0001) / (2 * float(m))))
     return H_er
 
+def statistics_cluster_props(A, Z_obs):
+    def get_blocks(A_in, Z_obs, normalize=True):
+        block = Z_obs.T.dot(A_in.dot(Z_obs))
+        counts = np.sum(Z_obs, axis=0)
+        blocks_outer = counts[:,None].dot(counts[None,:])
+        if normalize:
+            blocks_outer = np.multiply(block, 1/blocks_outer)
+        return blocks_outer
+    
+    in_blocks = get_blocks(A, Z_obs)
+    diag_mean = np.multiply(in_blocks, np.eye(in_blocks.shape[0])).mean()
+    offdiag_mean = np.multiply(in_blocks, 1-np.eye(in_blocks.shape[0])).mean() 
+    return diag_mean, offdiag_mean
 
-def compute_graph_statistics(A_in):
+def statistics_compute_cpl(A):
+    """Compute characteristic path length."""
+    P = sp.csgraph.shortest_path(sp.csr_matrix(A))
+    return P[((1 - np.isinf(P)) * (1 - np.eye(P.shape[0]))).astype(np.bool)].mean()
+
+
+def compute_graph_statistics(A_in, Z_obs=None):
     """
 
     Parameters
     ----------
     A_in: sparse matrix
           The input adjacency matrix.
+    Z_obs: np.matrix [N, K], where K is the number of classes.
+          Matrix whose rows are one-hot vectors indicating the class membership of the respective node.
+          
     Returns
     -------
     Dictionary containing the following statistics:
@@ -708,6 +730,8 @@ def compute_graph_statistics(A_in):
              * Assortativity
              * Clustering coefficient
              * Number of connected components
+             * Intra- and inter-community density (if Z_obs is passed)
+             * Characteristic path length
     """
 
     A = A_in.copy()
@@ -757,6 +781,14 @@ def compute_graph_statistics(A_in):
 
     # Number of connected components
     statistics['n_components'] = connected_components(A)[0]
+    
+    if Z_obs is not None:
+        # inter- and intra-community density
+        intra, inter = statistics_cluster_props(A, Z_obs)
+        statistics['intra_community_density'] = intra
+        statistics['inter_community_density'] = inter
+      
+    statistics['cpl'] = statistics_compute_cpl(A)
 
     return statistics
 
