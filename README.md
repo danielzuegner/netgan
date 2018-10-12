@@ -28,6 +28,10 @@ the respective parts of the code.
 ## Pre-trained models used in the paper
 Run `graph_generation_pretrained.ipynb` and `link_prediction_pretrained.ipynb` to try our pre-trained models on Cora-ML.
  
+## Latent variable interpolation
+Run `latent_interpolation.ipynb` to run latent variable interpolation experiments as in the paper.
+<img src="https://www.kdd.in.tum.de/fileadmin/w00bxq/www/netgan/heatmaps.png" width="400">
+
 ## Installation
 
 To install the package, run `python setup.py install`.
