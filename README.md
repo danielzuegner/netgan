@@ -39,6 +39,23 @@ Run `latent_interpolation.ipynb` to run latent variable interpolation experiment
 ## Installation
 To install the package, run `python setup.py install`.
 
+## Citation
+Please cite our paper if you use the model or this code in your own work:
+```
+@inproceedings{DBLP:conf/icml/BojchevskiSZG18,
+  author    = {Aleksandar Bojchevski and
+               Oleksandr Shchur and
+               Daniel Z{\"{u}}gner and
+               Stephan G{\"{u}}nnemann},
+  title     = {NetGAN: Generating Graphs via Random Walks},
+  booktitle = {Proceedings of the 35th International Conference on Machine Learning,
+               {ICML} 2018, Stockholmsm{\"{a}}ssan, Stockholm, Sweden, July
+               10-15, 2018},
+  pages     = {609--618},
+  year      = {2018},
+}
+```
+
 ## References
 ### Cora dataset
 In the `data` folder you can find the Cora-ML dataset. The raw data was originally published by   
