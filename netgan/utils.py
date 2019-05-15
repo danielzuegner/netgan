@@ -356,7 +356,7 @@ def random_walk(edges, node_ixs, rwlen, p=1, q=1, n_walks=1):
                 is_dist_1.append(int(n in set(prev_nbs)))
 
             is_dist_1_np = np.array(is_dist_1)
-            is_dist_0 = nbs == walk[-1]
+            is_dist_0 = nbs == walk[-2]
             is_dist_2 = 1 - is_dist_1_np - is_dist_0
 
             alpha_pq = is_dist_0 / p + is_dist_1_np + is_dist_2/q
