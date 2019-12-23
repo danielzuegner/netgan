@@ -1,7 +1,7 @@
 # NetGAN: Generating Graphs via Random Walks
 
 <p align="center">
-<img src="https://www.kdd.in.tum.de/fileadmin/w00bxq/www/netgan/netgan.png" width="400">
+<img src="https://www.in.tum.de/fileadmin//w00bws/daml/netgan/netgan.png" width="400">
 </p>
 
 Implementation of the method proposed in the paper:   
